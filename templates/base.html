@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <title>Min side</title>
+</head>
+<body>
+
+  <nav>
+    <a href="{{ url_for('index') }}">Hjem</a>
+    <a href="{{ url_for('velkommen') }}">Velkommen</a>
+    <a href="{{ url_for('login') }}">Logg inn</a>
+    <a href="{{ url_for('registrer') }}">Registrer</a>
+  </nav>
+
+
+  {% block content %}
+  {% endblock %}
+
+</body>
+</html>
