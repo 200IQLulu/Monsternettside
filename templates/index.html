@@ -2,8 +2,32 @@
 
 {% block content %}
 
-<h1>Monster</h1>
-<p><a href="{{ url_for('register') }}">Register ny bruker</a></p>
-<p><a href="{{ url_for('login') }}">Logg inn</a></p>
+<h1 class="hero-title">Monster Energy</h1>
+
+<img class="banner"
+     src="{{ url_for('static', filename='images/monster2cans.jpg') }}"
+     alt="Monster Dåser">
+
+<div class="container">
+  <p>
+    Monster Energy er det ledende energidrikkmerket, kjent for sin høye energi-formel
+    og dristige smaker. Fyll opp eventyrene dine med Monster!
+  </p>
+
+  <h3>Funksjoner:</h3>
+
+  <ul>
+    <li>Høyt koffeininnhold for maksimal energi</li>
+    <li>Variasjon av smaker å velge mellom</li>
+    <li>Tilgjengelig i bokser og andre formater</li>
+  </ul>
+
+  <p>
+    <a href="{{ url_for('register') }}">Registrer ny bruker</a>
+  </p>
+  <p>
+    <a href="{{ url_for('login') }}">Logg inn</a>
+  </p>
+</div>
 
 {% endblock %}
