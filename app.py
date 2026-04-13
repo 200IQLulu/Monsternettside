@@ -3,7 +3,7 @@ import mysql.connector
 from forms import RegisterForm, LoginForm
 
 app = Flask(__name__)
-app.secret_key = "hemmelig-nok"
+app.secret_key = "hemmelig-nokk"
 
 # DB-tilkobling
 def get_conn():
@@ -74,7 +74,20 @@ def velkommen():
     bruker = session.get('bruker')
     if not bruker:
         return redirect("/login")
-    return render_template("velkommen.html", name=bruker)
+    
+    conn = get_conn()
+    cur = conn.cursor(dictionary=True)
+    cur.execute("SELECT * FROM monster_smaker")
+    monster_info = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    
+
+
+    return render_template("velkommen.html", name=bruker, monster_liste=monster_info)
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)

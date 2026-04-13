@@ -1,7 +1,14 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Velkommen, {{ name }}!</h2>
-<p>Du er nå logget inn.</p>
-<a href="/">Tilbake til startsiden</a>
+<div class="container">
+  <h2>Velkommen, {{ name }}!</h2>
+  <p>Du er nå logget inn.</p>
+  <p>
+    <a href="{{ url_for('index') }}">Tilbake til startsiden</a>
+  </p>
+  {% for monster in monster_liste %}
+    <p>{{ monster["navn"] }} </p>
+  {% endfor %}
+</div>
 {% endblock %}
