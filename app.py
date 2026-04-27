@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, session
+from flask import Flask, render_template, redirect, session, abort
 import mysql.connector
 from forms import RegisterForm, LoginForm
 
@@ -68,27 +68,21 @@ def login():
 
     return render_template("login.html", form=form)
 
-# Velkomstside (krever login)
+# Velkomstside
 @app.route("/velkommen")
-@app.route("/velkommen/<int:id>")
-def velkommen(id=None):
+def velkommen():
+
     bruker = session.get('bruker')
+
     if not bruker:
         return redirect("/login")
     
     conn = get_conn()
     cur = conn.cursor(dictionary=True)
 
-    #henter alle smaker
+    # Hent alle monstre
     cur.execute("SELECT * FROM monster_smaker")
     monster_info = cur.fetchall()
-
-    vaglt_monster = None
-
-    #hvis id finnes
-    if id is not None:
-        cur.execute("SELECT * FROM monster_smaker WHERE id = %s", (id,))
-        vaglt_monster = cur.fetchone()
 
     cur.close()
     conn.close()
@@ -96,10 +90,27 @@ def velkommen(id=None):
     return render_template(
         "velkommen.html", 
         name=bruker,
-        monster_liste=monster_info,
-        valgt_monster=vaglt_monster
+        monster_liste=monster_info
     )
 
+# Infoside for en bestemt monster-smak
+@app.route("/velkommen/<string:smak>")
+def monster_info(smak: str):
+    bruker = session.get('bruker')
+    if not bruker:
+        return redirect("/login")
+
+    conn = get_conn()
+    cur = conn.cursor(dictionary=True)
+    cur.execute("SELECT * FROM monster_smaker WHERE navn = %s", (smak,))
+    monster = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if not monster:
+        abort(404)
+
+    return render_template("monster_info.html", name=bruker, monster=monster)
 
 if __name__ == "__main__":
     app.run(debug=True)

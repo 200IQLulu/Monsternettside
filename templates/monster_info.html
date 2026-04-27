@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+  <p><a class="nav-link" href="{{ url_for('velkommen') }}">← Tilbake til velkommen</a></p>
+
+  <h2>{{ monster["navn"] }}</h2>
+
+  <img class="info-img"
+       src="{{ url_for('static', filename='images/' ~ monster['id'] ~ '.jpg') }}"
+       alt="{{ monster['navn'] }}">
+
+  <p>{{ monster["info"] if monster["info"] else "Ingen info registrert ennå." }}</p>
+</div>
+{% endblock %}
+
