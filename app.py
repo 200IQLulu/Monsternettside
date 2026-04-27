@@ -70,23 +70,35 @@ def login():
 
 # Velkomstside (krever login)
 @app.route("/velkommen")
-def velkommen():
+@app.route("/velkommen/<int:id>")
+def velkommen(id=None):
     bruker = session.get('bruker')
     if not bruker:
         return redirect("/login")
     
     conn = get_conn()
     cur = conn.cursor(dictionary=True)
+
+    #henter alle smaker
     cur.execute("SELECT * FROM monster_smaker")
     monster_info = cur.fetchall()
+
+    vaglt_monster = None
+
+    #hvis id finnes
+    if id is not None:
+        cur.execute("SELECT * FROM monster_smaker WHERE id = %s", (id,))
+        vaglt_monster = cur.fetchone()
+
     cur.close()
     conn.close()
 
-    
-
-
-    return render_template("velkommen.html", name=bruker, monster_liste=monster_info)
-
+    return render_template(
+        "velkommen.html", 
+        name=bruker,
+        monster_liste=monster_info,
+        valgt_monster=vaglt_monster
+    )
 
 
 if __name__ == "__main__":

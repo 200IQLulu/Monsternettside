@@ -456,3 +456,34 @@ footer p {
     animation: none !important;
   }
 }
+
+/* MONSTER GRID */
+
+.monster-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.monster-card {
+  background: rgba(10, 12, 16, 0.8);
+  border-radius: 16px;
+  padding: 10px;
+  transition: transform 0.2s;
+}
+
+.monster-card:hover {
+  transform: scale(1.05);
+}
+
+.monster-card img {
+  width: 100%;
+  height: 150px;
+  object-fit: contain;
+}
+
+.info-img {
+  width: 300px;
+  margin-top: 20px;
+}
