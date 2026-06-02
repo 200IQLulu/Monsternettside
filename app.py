@@ -23,15 +23,15 @@ def index():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     form = RegisterForm()
+
     if form.validate_on_submit():
-        bruker = form.name.data
-        brukerbruker = form.username.data
+        bruker = form.username.data
         passord = form.password.data
 
         conn = get_conn()
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO brukere (bruker, passord) VALUES (%s, %s)",
+            "INSERT INTO brukere (bruker, passord) VALUES ( %s, %s)",
             (bruker, passord)
         )
         conn.commit()
