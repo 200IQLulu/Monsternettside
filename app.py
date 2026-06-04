@@ -2,12 +2,21 @@ import os
 from flask import Flask, render_template, redirect, session, abort, request
 import mysql.connector
 from mysql.connector import Error
+from werkzeug.security import check_password_hash, generate_password_hash  # Hashing av passord
 from werkzeug.utils import secure_filename
 from forms import RegisterForm, LoginForm, MonsterForm
 
 
 app = Flask(__name__)
 app.secret_key = "hemmelig-nokk"
+
+ #Instillinger for admin-bruker
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+UPLOAD_FOLDER = os.path.join(app.root_path, "static", "images")
+ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg"}
+PASSWORD_HASH_METHOD = "scrypt"  # Algoritme som brukes for alle passord-hasher
+
 
 # DB-tilkobling
 def get_conn():
@@ -18,25 +27,51 @@ def get_conn():
         database="handleliste_db"
     )
 
+
+# Går gjennom alle brukere og hasher passord som fortsatt er klartekst
+def ensure_password_hashing():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT bruker, passord FROM brukere")
+    users = cur.fetchall()
+
+    for username, stored_password in users:
+        # Sjekk om passordet allerede er hash (starter med pbkdf2: eller scrypt:)
+        is_hashed = bool(stored_password) and (
+            stored_password.startswith("pbkdf2:") or stored_password.startswith("scrypt:")
+        )
+        if not is_hashed:
+            # Hash klartekst og erstatt i databasen
+            cur.execute(
+                "UPDATE brukere SET passord = %s WHERE bruker = %s AND passord = %s",
+                (generate_password_hash(stored_password, method=PASSWORD_HASH_METHOD), username, stored_password),
+            )
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
 # Hovedside
 @app.route("/")
 def index():
     return render_template("index.html")
 
-# Registrering
+# Registrering av ny bruker
 @app.route("/register", methods=["GET", "POST"])
 def register():
     form = RegisterForm()
 
     if form.validate_on_submit():
         bruker = form.username.data
-        passord = form.password.data
+        # Hash passordet før det lagres — aldri klartekst i databasen
+        passord_hash = generate_password_hash(form.password.data, method=PASSWORD_HASH_METHOD)
 
         conn = get_conn()
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO brukere (bruker, passord) VALUES ( %s, %s)",
-            (bruker, passord)
+            "INSERT INTO brukere (bruker, passord) VALUES (%s, %s)",
+            (bruker, passord_hash)  # passord_hash er scrypt-strengen, f.eks. scrypt:32768:8:1$...
         )
         conn.commit()
         cur.close()
@@ -46,7 +81,7 @@ def register():
 
     return render_template("register.html", form=form)
 
-# Login
+# Innlogging
 @app.route("/login", methods=["GET", "POST"])
 def login():
     form = LoginForm()
@@ -56,15 +91,17 @@ def login():
 
         conn = get_conn()
         cur = conn.cursor()
+        # Hent lagret hash — sammenlignes i Python, ikke direkte i SQL
         cur.execute(
-            "SELECT bruker FROM brukere WHERE bruker=%s AND passord=%s",
-            (brukerbruker, passord)
+            "SELECT bruker, passord FROM brukere WHERE bruker=%s",
+            (brukerbruker,)
         )
         user = cur.fetchone()
         cur.close()
         conn.close()
 
-        if user:
+        # Sjekk om passordet brukeren skrev matcher hashen i databasen
+        if user and check_password_hash(user[1], passord):
             session['bruker'] = user[0]
             return redirect("/velkommen")
         else: 
@@ -72,19 +109,18 @@ def login():
 
     return render_template("login.html", form=form)
 
-# Velkomstside
+# Side som vises etter innlogging
 @app.route("/velkommen")
 def velkommen():
 
     bruker = session.get('bruker')
 
     if not bruker:
-        return redirect("/login")
+        return redirect("/login")  # Må være innlogget
     
     conn = get_conn()
     cur = conn.cursor(dictionary=True)
 
-    # Hent alle monstre
     cur.execute("SELECT * FROM monster_smaker")
     monster_info = cur.fetchall()
 
@@ -97,7 +133,7 @@ def velkommen():
         monster_liste=monster_info
     )
 
-# Infoside for en bestemt monster-smak
+# Detaljside for én monster-smak, f.eks. /velkommen/Ultra
 @app.route("/velkommen/<string:smak>")
 def monster_info(smak: str):
     bruker = session.get('bruker')
@@ -112,9 +148,12 @@ def monster_info(smak: str):
     conn.close()
 
     if not monster:
-        abort(404)
+        abort(404)  # Finnes ikke i databasen
 
     return render_template("monster_info.html", name=bruker, monster=monster)
 
+# Starter nettsiden lokalt
 if __name__ == "__main__":
+    ensure_admin_support()      # Oppretter/oppdaterer admin med hashet passord
+    ensure_password_hashing()   # Hasher gamle klartekst-passord ved oppstart
     app.run(debug=True)
