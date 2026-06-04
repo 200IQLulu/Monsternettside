@@ -17,6 +17,10 @@ UPLOAD_FOLDER = os.path.join(app.root_path, "static", "images")
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg"}
 PASSWORD_HASH_METHOD = "scrypt"  # Algoritme som brukes for alle passord-hasher
 
+# is_admin i databasen: 0 = vanlig bruker, 1 = admin
+VANLIG_BRUKER = 0
+ADMIN_BRUKER = 1
+
 
 # DB-tilkobling
 def get_conn():
@@ -26,6 +30,37 @@ def get_conn():
         password="123Akademiet",
         database="handleliste_db"
     )
+
+# Sørger for at admin-bruker finnes (is_admin = 1)
+def ensure_admin_support():
+    conn = get_conn()
+    cur = conn.cursor()
+    admin_password_hash = generate_password_hash(ADMIN_PASSWORD, method=PASSWORD_HASH_METHOD)
+
+    # Kolonne is_admin: 0 = vanlig, 1 = admin (standard 0 for nye rader)
+    cur.execute("SHOW COLUMNS FROM brukere LIKE 'is_admin'")
+    has_is_admin = cur.fetchone() is not None
+    if not has_is_admin:
+        cur.execute(
+            "ALTER TABLE brukere ADD COLUMN is_admin TINYINT(1) NOT NULL DEFAULT 0"
+        )
+
+    cur.execute("SELECT bruker FROM brukere WHERE bruker = %s", (ADMIN_USERNAME,))
+    admin_exists = cur.fetchone()
+    if admin_exists:
+        cur.execute(
+            "UPDATE brukere SET passord = %s, is_admin = %s WHERE bruker = %s",
+            (admin_password_hash, ADMIN_BRUKER, ADMIN_USERNAME),
+        )
+    else:
+        cur.execute(
+            "INSERT INTO brukere (bruker, passord, is_admin) VALUES (%s, %s, %s)",
+            (ADMIN_USERNAME, admin_password_hash, ADMIN_BRUKER),
+        )
+
+    conn.commit()
+    cur.close()
+    conn.close()
 
 
 # Går gjennom alle brukere og hasher passord som fortsatt er klartekst
@@ -69,9 +104,10 @@ def register():
 
         conn = get_conn()
         cur = conn.cursor()
+        # Nye brukere får alltid is_admin = 0 (vanlig bruker)
         cur.execute(
-            "INSERT INTO brukere (bruker, passord) VALUES (%s, %s)",
-            (bruker, passord_hash)  # passord_hash er scrypt-strengen, f.eks. scrypt:32768:8:1$...
+            "INSERT INTO brukere (bruker, passord, is_admin) VALUES (%s, %s, %s)",
+            (bruker, passord_hash, VANLIG_BRUKER),
         )
         conn.commit()
         cur.close()
@@ -91,18 +127,19 @@ def login():
 
         conn = get_conn()
         cur = conn.cursor()
-        # Hent lagret hash — sammenlignes i Python, ikke direkte i SQL
+        # Hent bruker + is_admin (0 eller 1) fra databasen
         cur.execute(
-            "SELECT bruker, passord FROM brukere WHERE bruker=%s",
+            "SELECT bruker, passord, is_admin FROM brukere WHERE bruker=%s",
             (brukerbruker,)
         )
         user = cur.fetchone()
         cur.close()
         conn.close()
 
-        # Sjekk om passordet brukeren skrev matcher hashen i databasen
         if user and check_password_hash(user[1], passord):
             session['bruker'] = user[0]
+            # Lagre 1 hvis admin, ellers 0
+            session['is_admin'] = ADMIN_BRUKER if user[2] == ADMIN_BRUKER else VANLIG_BRUKER
             return redirect("/velkommen")
         else: 
             form.username.errors.append("Feil brukernavn eller passord")
@@ -130,7 +167,8 @@ def velkommen():
     return render_template(
         "velkommen.html", 
         name=bruker,
-        monster_liste=monster_info
+        monster_liste=monster_info,
+        is_admin=session.get('is_admin', VANLIG_BRUKER),  # 1 = admin, 0 = vanlig
     )
 
 # Detaljside for én monster-smak, f.eks. /velkommen/Ultra
@@ -150,7 +188,12 @@ def monster_info(smak: str):
     if not monster:
         abort(404)  # Finnes ikke i databasen
 
-    return render_template("monster_info.html", name=bruker, monster=monster)
+    return render_template(
+        "monster_info.html",
+        name=bruker,
+        monster=monster,
+        is_admin=session.get('is_admin', VANLIG_BRUKER),  # 1 = admin, 0 = vanlig
+    )
 
 # Starter nettsiden lokalt
 if __name__ == "__main__":
