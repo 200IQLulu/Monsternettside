@@ -44,6 +44,6 @@ Målet videre er å fullføre admin brukeren sånn at den kan legge til nye og f
 
 
 ## Kilder:
-Chat gpt:veiledning, terminal problemer
-Cursor AI: For problemer med kode
+- Chat gpt:veiledning, terminal problemer
+- Cursor AI: For problemer med kode
 
