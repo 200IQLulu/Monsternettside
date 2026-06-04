@@ -38,3 +38,12 @@ Det finnes også en **admin**-bruker som lages automatisk når du starter appen
 ## Mål videre
 
 Målet videre er å fullføre admin brukeren sånn at den kan legge til nye og fjerne gamle monster smaker.
+
+
+
+
+
+## Kilder:
+Chat gpt:veiledning, terminal problemer
+Cursor AI: For problemer med kode
+
