@@ -1,6 +1,10 @@
-from flask import Flask, render_template, redirect, session, abort
+import os
+from flask import Flask, render_template, redirect, session, abort, request
 import mysql.connector
-from forms import RegisterForm, LoginForm
+from mysql.connector import Error
+from werkzeug.utils import secure_filename
+from forms import RegisterForm, LoginForm, MonsterForm
+
 
 app = Flask(__name__)
 app.secret_key = "hemmelig-nokk"
